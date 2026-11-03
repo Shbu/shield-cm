@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SHIELD AI Crisis Management</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
+</head>
+<body>
+  <div id="login-view" class="view">
+    <div class="corner">
+      <button type="button" class="icon-btn cog" aria-label="Appearance settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+    <main class="login">
+      <div class="login-card">
+        <svg class="logo" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.7 7.5 10.3 4.4-1.6 7.5-5.7 7.5-10.3V5.5L12 2.5z"/>
+          <path d="m9 12 2.2 2.2L15.5 10"/>
+        </svg>
+        <h1>SHIELD</h1>
+        <p class="tagline">AI Crisis Management</p>
+        <p class="lede">Ransomware crisis-management playbook guidance for healthcare organizations.</p>
+
+        <form id="login-form" autocomplete="off">
+          <label for="invite">Access code</label>
+          <div class="pw">
+            <input id="invite" name="invite" type="password" maxlength="64" required autocomplete="off" placeholder="XXXX-XXXX-XXXX">
+            <button id="toggle-code" type="button" class="pw-toggle" aria-pressed="false" aria-label="Show access code">
+              <svg class="eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.9 10.9 0 0 1 12 19C5.5 19 1.5 12 1.5 12a19 19 0 0 1 4.6-5.6M9.9 5.2A9.7 9.7 0 0 1 12 5c6.5 0 10.5 7 10.5 7a19 19 0 0 1-2.7 3.6M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
+          <button id="login-btn" type="submit" class="btn">Continue</button>
+          <div id="login-status" class="status" role="status" aria-live="polite"></div>
+        </form>
+        <p class="hint">Access is by invitation only.</p>
+      </div>
+    </main>
+  </div>
+
+  <div id="app-view" class="view" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.7 7.5 10.3 4.4-1.6 7.5-5.7 7.5-10.3V5.5L12 2.5z"/>
+          <path d="m9 12 2.2 2.2L15.5 10"/>
+        </svg>
+        <span><strong>SHIELD</strong> AI Crisis Management</span>
+      </div>
+      <div class="topbar-right">
+        <span id="quota" class="quota"></span>
+        <button type="button" class="icon-btn cog" aria-label="Appearance settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button id="signout" type="button" class="btn-ghost">Sign out</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel input-panel">
+        <h2>Describe the incident</h2>
+        <p class="muted">A few sentences are enough: what happened, which systems are affected, whether data may have been taken, and the impact on patient care.</p>
+        <div class="callout">Do not enter PHI, patient identifiers or other personal data.</div>
+
+        <form id="form" autocomplete="off">
+          <label for="summary" class="sr-only">Incident summary</label>
+          <textarea id="summary" name="summary" rows="9" required minlength="20" maxlength="1500"
+            placeholder="Example: Overnight our EHR and network were encrypted. Ambulances are being diverted and a ransom note demands payment in Bitcoin. We believe patient files were copied."></textarea>
+          <div class="counter"><span id="count">0</span> / 1500</div>
+
+          <div class="examples">
+            <span class="muted">Try an example:</span>
+            <button type="button" class="chip" data-example="Overnight our EHR and network were encrypted at a multi-hospital system. Ambulances are being diverted and a ransom note demands $4 million in Bitcoin. We believe patient files were copied before encryption.">Hospital outage</button>
+            <button type="button" class="chip" data-example="A vendor that hosts our patient billing data reported unauthorized access and data exfiltration. About 120,000 patients across several states may be affected. Systems are still running and no ransom demand has been received.">Vendor data theft</button>
+            <button type="button" class="chip" data-example="Ransomware encrypted our file servers and backups. Clinical systems are on paper downtime. Leadership is considering paying the ransom and outside counsel and the cyber insurer have been engaged.">Payment decision</button>
+          </div>
+
+          <div id="turnstile"></div>
+          <button id="submit" type="submit" class="btn btn-block">Analyze incident</button>
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </form>
+      </aside>
+
+      <section class="results-area" aria-label="Analysis results">
+        <div id="empty" class="panel empty">
+          <h2>Results appear here</h2>
+          <ul>
+            <li><strong>Matched triggers</strong> with stakeholders, roles and communication owners</li>
+            <li><strong>Notification obligations</strong> for PHI, ransom and general external parties</li>
+            <li><strong>Suggested next steps</strong> and questions to answer, labeled as AI-generated</li>
+          </ul>
+        </div>
+        <div id="loading" hidden>
+          <div class="skeleton tall"></div>
+          <div class="skeleton-grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+        </div>
+        <div id="results" hidden></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="settings" class="settings" role="dialog" aria-label="Appearance settings" hidden>
+    <h2>Appearance</h2>
+    <div class="set-group">
+      <span class="set-label" id="mode-label">Theme</span>
+      <div class="seg" role="group" aria-labelledby="mode-label">
+        <button type="button" data-mode="light" aria-pressed="false">Light</button>
+        <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
+        <button type="button" data-mode="system" aria-pressed="false">System</button>
+      </div>
+    </div>
+    <div class="set-group">
+      <span class="set-label">Color palette</span>
+      <div id="palettes" class="palettes"></div>
+    </div>
+    <p class="muted small">Saved in this browser until you clear site data. System follows your device setting.</p>
+  </div>
+
+  <footer>
+    AI-assisted guidance. Playbook content is drawn from the SHIELD playbook; AI-generated content is labeled. Review with your legal, privacy and incident-command leads before acting.
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
