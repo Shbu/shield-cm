@@ -1,4 +1,6 @@
+import json
 import os
+import re
 
 from botocore.exceptions import ClientError
 
@@ -7,18 +9,45 @@ from prompt import TOOL_NAME, wrap_user_text
 SECTIONS = ("internal", "phi", "ransom", "general")
 LLM_KEYS = {"internal": "internal_triggers", "phi": "phi_labels", "ransom": "ransom_labels", "general": "general_labels"}
 MAX_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "2500"))
+MAX_ATTEMPTS = 3
+REQUIRED_LISTS = ("internal_triggers", "phi_labels", "ransom_labels", "general_labels", "next_steps")
+_PARAM = re.compile(r'<parameter name="(\w+)">')
+_TRAILING_TAG = re.compile(r"\s*</[^>]*>\s*$")
 
 
 class AnalysisError(Exception):
     pass
 
 
-def call_llm(client, model_id, prefix, tool_spec, text, use_cache=True, examples=""):
+def recover(llm):
+    """The model sometimes runs later tool parameters into an earlier string value as pseudo-XML; split them back out."""
+    for key, value in list(llm.items()):
+        if not isinstance(value, str) or "<parameter name=" not in value:
+            continue
+        head, _, rest = value.partition("<parameter name=")
+        llm[key] = _TRAILING_TAG.sub("", head).strip()
+        parts = _PARAM.split('<parameter name=' + rest)
+        for name, body in zip(parts[1::2], parts[2::2]):
+            body = re.sub(r"\s*</parameter>\s*$", "", body).strip()
+            try:
+                parsed = json.loads(body)
+            except ValueError:
+                parsed = body
+            if name not in llm or llm[name] in (None, "", [], {}):
+                llm[name] = parsed
+    return llm
+
+
+def is_complete(llm):
+    return llm.get("report_status") == "insufficient" or all(isinstance(llm.get(k), list) for k in REQUIRED_LISTS)
+
+
+def _invoke(client, model_id, prefix, tool_spec, text, use_cache, examples, temperature):
     kwargs = {
         "modelId": model_id,
         "system": [{"text": prefix}] + ([{"cachePoint": {"type": "default"}}] if use_cache else []),
         "messages": [{"role": "user", "content": [{"text": examples + wrap_user_text(text)}]}],
-        "inferenceConfig": {"maxTokens": MAX_TOKENS, "temperature": 0},
+        "inferenceConfig": {"maxTokens": MAX_TOKENS, "temperature": temperature},
         "toolConfig": {"tools": [{"toolSpec": tool_spec}], "toolChoice": {"tool": {"name": TOOL_NAME}}},
     }
     try:
@@ -26,12 +55,22 @@ def call_llm(client, model_id, prefix, tool_spec, text, use_cache=True, examples
     except ClientError as exc:
         # Some models reject cache points; retry once without.
         if use_cache and exc.response["Error"]["Code"] == "ValidationException" and "cache" in str(exc).lower():
-            return call_llm(client, model_id, prefix, tool_spec, text, use_cache=False, examples=examples)
+            return _invoke(client, model_id, prefix, tool_spec, text, False, examples, temperature)
         raise
     for block in resp["output"]["message"]["content"]:
         if "toolUse" in block:
             return block["toolUse"]["input"], resp.get("usage", {})
     raise AnalysisError("model returned no structured output")
+
+
+def call_llm(client, model_id, prefix, tool_spec, text, use_cache=True, examples=""):
+    # Temperature 0 repeats a malformed answer, so retries sample.
+    for attempt in range(MAX_ATTEMPTS):
+        out, usage = _invoke(client, model_id, prefix, tool_spec, text, use_cache, examples, 0 if attempt == 0 else 0.4)
+        out = recover(out)
+        if is_complete(out):
+            return out, usage
+    raise AnalysisError("model output was incomplete")
 
 
 def _as_list(value):
