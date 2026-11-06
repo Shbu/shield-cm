@@ -69,15 +69,17 @@ def check_invite(code):
 
 
 def _bump(pk, sk, limit, ttl_seconds, message):
-    """Atomically increment a counter; refuse once it reaches the limit."""
+    """Atomically increment a counter; refuse once it reaches the limit. Returns the new count."""
     try:
-        _ddb.update_item(
+        resp = _ddb.update_item(
             TableName=TABLE, Key={"pk": {"S": pk}, "sk": {"S": sk}},
             UpdateExpression="ADD cnt :one SET #t = :ttl",
             ConditionExpression="attribute_not_exists(cnt) OR cnt < :limit",
             ExpressionAttributeNames={"#t": "ttl"},
             ExpressionAttributeValues={":one": {"N": "1"}, ":limit": {"N": str(limit)},
-                                       ":ttl": {"N": str(int(time.time()) + ttl_seconds)}})
+                                       ":ttl": {"N": str(int(time.time()) + ttl_seconds)}},
+            ReturnValues="UPDATED_NEW")
+        return int(resp["Attributes"]["cnt"]["N"])
     except ClientError as exc:
         if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
             raise GateError(429, "rate_limited", message)
@@ -90,12 +92,19 @@ def consume_login_attempt(ip):
 
 
 def consume_quotas(invite, ip):
+    """Count one analysis against the IP, global and invite limits; returns the invite's analyses used today."""
     now = datetime.now(timezone.utc)
     day, hour = now.strftime("%Y%m%d"), now.strftime("%Y%m%d%H")
     _bump("IP#" + _sha(ip), "H#" + hour, IP_HOURLY_LIMIT, 2 * 3600, "Too many requests from your network. Try again later.")
     _bump("GLOBAL", "D#" + day, GLOBAL_DAILY_LIMIT, 2 * 86400, "The service has reached its daily capacity. Try again tomorrow.")
-    _bump("INVITE#" + invite["hash"], "D#" + day, invite["daily_quota"], 2 * 86400,
-          "Daily limit for this access code reached. Try again tomorrow.")
+    return _bump("INVITE#" + invite["hash"], "D#" + day, invite["daily_quota"], 2 * 86400,
+                 "Daily limit for this access code reached. Try again tomorrow.")
+
+
+def used_today(invite):
+    day = datetime.now(timezone.utc).strftime("%Y%m%d")
+    item = _ddb.get_item(TableName=TABLE, Key={"pk": {"S": "INVITE#" + invite["hash"]}, "sk": {"S": "D#" + day}}).get("Item")
+    return int(item["cnt"]["N"]) if item and "cnt" in item else 0
 
 
 def save_history(analysis_id, invite_label, text, llm_output, model_id, usage):

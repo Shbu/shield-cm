@@ -6,9 +6,10 @@
   var loginView = $("login-view"), appView = $("app-view");
   var loginForm = $("login-form"), loginBtn = $("login-btn"), loginStatus = $("login-status");
   var invite = $("invite"), summary = $("summary"), form = $("form"), submit = $("submit");
-  var statusEl = $("status"), results = $("results"), empty = $("empty"), loading = $("loading");
+  var statusEl = $("status"), results = $("results"), empty = $("empty"), loading = $("loading"), side = $("side");
   var turnstileToken = "", turnstileId = null, turnstileReady = false;
   var KEY = "shield_invite";
+  $("version").textContent = "Version " + cfg.appVersion + (cfg.releaseDate ? " (" + cfg.releaseDate + ")" : "");
 
   // All dynamic text goes through text nodes; never innerHTML.
   function h(tag, attrs, children) {
@@ -119,10 +120,37 @@
     invite.focus();
   }
 
+  // Daily analyses left for this access code; the counter resets at 00:00 UTC.
+  var quotaLimit = 0;
+  function setQuota(limit, used) {
+    var el = $("quota");
+    quotaLimit = limit || 0;
+    if (!limit) { el.hidden = true; return; }
+    el.hidden = false;
+    if (typeof used !== "number") {
+      $("q-num").textContent = limit + " / day";
+      el.setAttribute("data-level", "10");
+      el.setAttribute("data-state", "ok");
+      el.querySelector(".q-text").hidden = true;
+      return;
+    }
+    var left = Math.max(limit - used, 0);
+    var now = new Date();
+    var reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    var msg = left + " of " + limit + " analyses left today. Resets at " +
+      reset.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + " your time.";
+    $("q-num").textContent = left + " / " + limit;
+    el.querySelector(".q-text").hidden = false;
+    el.setAttribute("data-level", String(left > 0 ? Math.max(1, Math.round(left / limit * 10)) : 0));
+    el.setAttribute("data-state", left === 0 ? "empty" : left / limit <= 0.2 ? "low" : "ok");
+    el.title = msg;
+    $("q-sr").textContent = msg;
+  }
+
   function showApp(info) {
     loginView.hidden = true;
     appView.hidden = false;
-    $("quota").textContent = info && info.daily_quota ? info.daily_quota + " analyses per day" : "";
+    setQuota(info && info.daily_quota, info && info.used_today);
     renderTurnstile();
     summary.focus();
   }
@@ -171,6 +199,7 @@
     results.replaceChildren();
     results.hidden = true;
     empty.hidden = false;
+    resetSide();
     summary.value = "";
     $("count").textContent = "0";
     setStatus(statusEl, "");
@@ -244,8 +273,8 @@
       t.activates && t.situation ? h("p", { class: "sub" }, t.situation) : null,
       t.evidence ? h("p", { class: "quote" }, "\u201C" + t.evidence + "\u201D") : null,
       rows([
+        row("Communication Owner", t.communication_owner, t, "communication_owner"),
         row("Stakeholders", t.stakeholders, t, "stakeholders"),
-        row("Owner", t.communication_owner, t, "communication_owner"),
         row("Channel", ch.primary, t, "channels"),
       ]),
       more("Roles and actions", t.roles_and_actions, t, "roles_and_actions"),
@@ -286,24 +315,71 @@
     return group(id, tone, title, desc, items.length, h("div", { class: "cards" }, items.map(build)));
   }
 
-  var HORIZONS = [["0-1h", "First hour"], ["1-24h", "First 24 hours"], ["24-72h", "24 to 72 hours"]];
+  var HORIZONS = [
+    { key: "0-1h", title: "First hour", span: "0 to 1 h", icon: "bolt" },
+    { key: "1-24h", title: "First 24 hours", span: "1 to 24 h", icon: "calendar" },
+    { key: "24-72h", title: "24 to 72 hours", span: "1 to 3 days", icon: "flag" },
+  ];
+  var ICONS = {
+    bolt: ["M13 2 4 14h7l-1 8 9-12h-7l1-8z"],
+    calendar: ["M7 3v3M17 3v3M4 9h16", "M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"],
+    flag: ["M5 21V4", "M5 4h12l-2.5 4L17 12H5"],
+  };
 
-  function nextStepsGroup(data) {
+  function icon(name) {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    [["viewBox", "0 0 24 24"], ["width", "22"], ["height", "22"], ["fill", "none"], ["stroke", "currentColor"],
+      ["stroke-width", "1.8"], ["stroke-linecap", "round"], ["stroke-linejoin", "round"], ["aria-hidden", "true"]]
+      .forEach(function (a) { svg.setAttribute(a[0], a[1]); });
+    ICONS[name].forEach(function (d) {
+      var p = document.createElementNS(ns, "path");
+      p.setAttribute("d", d);
+      svg.appendChild(p);
+    });
+    return svg;
+  }
+
+  function initials(owner) {
+    var words = String(owner || "").match(/[A-Za-z]+/g) || [];
+    if (!words.length) return "";
+    return (words.length > 1 ? words[0].charAt(0) + words[1].charAt(0) : words[0].slice(0, 2)).toUpperCase();
+  }
+
+  // Visual timeline of the AI-generated next steps, one stage per time horizon.
+  function timeline(data) {
     var steps = data.next_steps || [];
     if (!steps.length) return null;
-    var cols = HORIZONS.map(function (hz) {
-      var items = steps.filter(function (st) { return st.horizon === hz[0]; });
-      if (!items.length) return null;
-      return h("div", { class: "col" }, [h("h3", {}, hz[1])].concat(items.map(function (st) {
-        return h("div", { class: "step" }, [st.action, st.owner ? h("span", { class: "who" }, st.owner) : null]);
-      })));
-    });
     var note = data.playbook_coverage === "full" ? "Based on the matched playbook triggers" : "Not part of the playbook";
-    var body = h("article", { class: "card", "data-tone": "steps" }, [
-      h("p", { class: "sub" }, [h("span", { class: "badge ai" }, "AI-generated"), " " + note]),
-      h("div", { class: "steps" }, cols.filter(Boolean)),
+    var stages = HORIZONS.map(function (hz, i) {
+      var items = steps.filter(function (st) { return st.horizon === hz.key; });
+      var list = items.length ? h("ul", { class: "tl-steps" }, items.map(function (st) {
+        return h("li", {}, [
+          h("span", { class: "avatar", title: st.owner || "" }, initials(st.owner) || "\u2022"),
+          h("div", {}, [h("span", { class: "a" }, st.action), st.owner ? h("span", { class: "o" }, st.owner) : null]),
+        ]);
+      })) : h("p", { class: "tl-none" }, "No actions listed for this window.");
+      return h("li", { class: "tl-stage", "data-stage": String(i + 1) }, [
+        h("div", { class: "tl-nodewrap" }, [
+          h("span", { class: "tl-node" }, icon(hz.icon)),
+          i < HORIZONS.length - 1 ? h("span", { class: "tl-rail" }) : null,
+        ]),
+        h("div", { class: "tl-title" }, [
+          h("strong", {}, hz.title),
+          h("span", { class: "tl-sub" }, hz.span),
+          h("span", { class: "tl-n" }, String(items.length)),
+        ]),
+        list,
+      ]);
+    });
+    return h("section", { class: "timeline", id: "sec-timeline", "data-tone": "steps" }, [
+      h("header", { class: "tl-head" }, [
+        h("h2", {}, "Response timeline"),
+        h("span", { class: "badge ai" }, "AI-generated"),
+        h("span", { class: "desc" }, note),
+      ]),
+      h("ol", { class: "tl-stages" }, stages),
     ]);
-    return group("sec-steps", "steps", "Suggested next steps", "Prioritized by time horizon", steps.length, body);
   }
 
   function questionsGroup(data) {
@@ -334,16 +410,63 @@
     }));
   }
 
+  function resetSide() {
+    side.setAttribute("data-empty", "true");
+    side.replaceChildren(h("p", { class: "muted side-hint" }, "Section counts and view options appear here after an analysis."));
+  }
+
   function renderInsufficient() {
+    resetSide();
     results.replaceChildren(h("div", { class: "notice" }, [
       h("strong", {}, "No ransomware or cyber incident could be identified in this text. "),
       "Describe what happened in a few sentences: which systems are affected, whether data was stolen, whether there is a ransom demand, and the impact on patient care. No playbook guidance or next steps are shown until then.",
     ]));
   }
 
+  // Right pane: section counts that jump to each section, view controls and analysis details.
+  function renderSide(data, entries) {
+    var counts = h("ul", { class: "counts" }, entries.map(function (e) {
+      var b = h("button", { type: "button", class: "count-row", "data-tone": e.tone }, [
+        h("span", { class: "dot" }), h("span", { class: "label" }, e.title), h("span", { class: "n" }, String(e.count)),
+      ]);
+      b.addEventListener("click", function () {
+        if (e.el.tagName === "DETAILS") e.el.open = true;
+        e.el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return h("li", {}, b);
+    }));
+
+    function tool(label, fn) {
+      var b = h("button", { type: "button", class: "tool" }, label);
+      b.addEventListener("click", fn);
+      return b;
+    }
+    function setAll(selector, open) {
+      [].forEach.call(results.querySelectorAll(selector), function (d) { d.open = open; });
+    }
+
+    side.setAttribute("data-empty", "false");
+    side.replaceChildren(
+      h("h2", {}, "Overview"),
+      h("p", { class: "cov" }, ["Playbook coverage ", h("span", { class: "badge " + data.playbook_coverage }, data.playbook_coverage)]),
+      h("h3", {}, "Jump to"),
+      counts,
+      h("h3", {}, "View"),
+      h("div", { class: "tools" }, [
+        tool("Collapse All", function () { setAll("details.group", false); }),
+        tool("Collapse Details", function () { setAll(".card details", false); }),
+        tool("Expand All", function () { setAll("details.group", true); }),
+        tool("Expand Details", function () { setAll(".card details", true); }),
+        tool("Print / Save as PDF", function () { window.print(); }),
+      ]),
+      h("p", { class: "meta" }, "Analysis " + data.id + (data.playbook_generated_at ? " | playbook generated " + data.playbook_generated_at : ""))
+    );
+  }
+
   function render(data) {
     if (data.report_status === "insufficient") return renderInsufficient();
 
+    var tl = timeline(data);
     var sections = [
       cardGroup("sec-internal", "internal", "Internal crisis triggers", "Who to activate and what to communicate inside the organization",
         data.internal_triggers || [], triggerCard),
@@ -353,7 +476,6 @@
         data.ransom || [], function (r) { return labelCard(r, "ransom"); }),
       cardGroup("sec-general", "general", "General external communications", "Other outside parties to inform",
         data.general || [], function (r) { return labelCard(r, "general"); }),
-      nextStepsGroup(data),
       questionsGroup(data),
       alsoLinkedGroup(data),
     ].filter(Boolean);
@@ -363,42 +485,24 @@
       none: "No playbook trigger matches this situation. The guidance below is AI-generated and is not from the playbook.",
     }[data.playbook_coverage];
 
-    var jump = h("div", { class: "jump" }, sections.map(function (sec) {
-      var title = sec.querySelector("h2").textContent;
-      var n = sec.querySelector(".n").textContent;
-      var b = h("button", { type: "button" }, [title, h("span", { class: "count" }, n)]);
-      b.addEventListener("click", function () { sec.open = true; sec.scrollIntoView({ behavior: "smooth", block: "start" }); });
-      return b;
-    }));
-
-    var collapseAll = h("button", { type: "button", class: "tool" }, "Collapse All");
-    var collapse = h("button", { type: "button", class: "tool" }, "Collapse Details");
-    var expandAll = h("button", { type: "button", class: "tool" }, "Expand All");
-    var expand = h("button", { type: "button", class: "tool" }, "Expand Details");
-    var print = h("button", { type: "button", class: "tool" }, "Print / Save as PDF");
-    function setAll(selector, open) {
-      [].forEach.call(results.querySelectorAll(selector), function (d) { d.open = open; });
-    }
-    collapseAll.addEventListener("click", function () { setAll("details.group", false); });
-    collapse.addEventListener("click", function () { setAll(".card details", false); });
-    expandAll.addEventListener("click", function () { setAll("details.group", true); });
-    expand.addEventListener("click", function () { setAll(".card details", true); });
-    print.addEventListener("click", function () { window.print(); });
+    var entries = sections.map(function (sec) {
+      return { el: sec, tone: sec.getAttribute("data-tone"), title: sec.querySelector("h2").textContent, count: sec.querySelector(".n").textContent };
+    });
+    if (tl) entries.unshift({ el: tl, tone: "steps", title: "Response timeline", count: (data.next_steps || []).length });
+    renderSide(data, entries);
 
     var nodes = [
-      h("div", { class: "toolbar" }, [jump, h("div", { class: "tools" }, [collapseAll, collapse, expandAll, expand, print])]),
+      tl,
       h("article", { class: "panel summary-card" }, [
         h("div", {}, [
-          h("h3", {}, ["Situation", h("span", { class: "badge " + data.playbook_coverage }, "Playbook coverage: " + data.playbook_coverage)]),
+          h("h3", {}, "Situation"),
           h("p", {}, data.situation_summary || ""),
         ]),
         factsGrid(data.facts),
       ]),
       coverageNote ? h("div", { class: "notice" }, coverageNote) : null,
       (data.warnings || []).length ? h("div", { class: "notice" }, data.warnings.join(" ")) : null,
-    ].concat(sections, [
-      h("p", { class: "meta" }, "Analysis " + data.id + (data.playbook_generated_at ? " | playbook generated " + data.playbook_generated_at : "")),
-    ]);
+    ].concat(sections);
     results.replaceChildren.apply(results, nodes.filter(Boolean));
   }
 
@@ -428,6 +532,7 @@
     })
       .then(function (data) {
         render(data);
+        if (data.quota) setQuota(data.quota.limit, data.quota.used);
         loading.hidden = true;
         results.hidden = false;
         setStatus(statusEl, "");
@@ -436,13 +541,14 @@
       .catch(function (err) {
         loading.hidden = true;
         if (err.code === "invalid_invite") return showLogin(err.message);
+        if (err.code === "rate_limited" && /access code/i.test(err.message)) setQuota(quotaLimit, quotaLimit);
         results.hidden = results.childNodes.length === 0;
         empty.hidden = !results.hidden;
         setStatus(statusEl, err.message || "Request failed.", true);
       })
       .then(function () {
         submit.disabled = false;
-        submit.textContent = "Analyze incident";
+        submit.textContent = "Analyze Incident";
         turnstileToken = "";
         if (turnstileId !== null) window.turnstile.reset(turnstileId);
       });

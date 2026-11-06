@@ -48,10 +48,15 @@
           <path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.7 7.5 10.3 4.4-1.6 7.5-5.7 7.5-10.3V5.5L12 2.5z"/>
           <path d="m9 12 2.2 2.2L15.5 10"/>
         </svg>
-        <span><strong>SHIELD</strong> AI Crisis Management</span>
+        <span><strong>SHIELD</strong><span class="brand-sub"> AI Crisis Management</span></span>
       </div>
       <div class="topbar-right">
-        <span id="quota" class="quota"></span>
+        <span id="quota" class="quota" hidden data-state="ok" data-level="10">
+          <span class="q-meter" aria-hidden="true"><i></i></span>
+          <span class="q-num" id="q-num"></span>
+          <span class="q-text" aria-hidden="true">left today</span>
+          <span class="sr-only" id="q-sr"></span>
+        </span>
         <button type="button" class="icon-btn cog" aria-label="Appearance settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
@@ -79,7 +84,7 @@
           </div>
 
           <div id="turnstile"></div>
-          <button id="submit" type="submit" class="btn btn-block">Analyze incident</button>
+          <button id="submit" type="submit" class="btn btn-block">Analyze Incident</button>
           <div id="status" class="status" role="status" aria-live="polite"></div>
         </form>
       </aside>
@@ -88,9 +93,9 @@
         <div id="empty" class="panel empty">
           <h2>Results appear here</h2>
           <ul>
+            <li><strong>A response timeline</strong> for the first hour, first 24 hours and 24 to 72 hours, labeled as AI-generated</li>
             <li><strong>Matched triggers</strong> with stakeholders, roles and communication owners</li>
             <li><strong>Notification obligations</strong> for PHI, ransom and general external parties</li>
-            <li><strong>Suggested next steps</strong> and questions to answer, labeled as AI-generated</li>
           </ul>
         </div>
         <div id="loading" hidden>
@@ -99,6 +104,10 @@
         </div>
         <div id="results" hidden></div>
       </section>
+
+      <aside id="side" class="panel side-panel" data-empty="true" aria-label="Overview and view options">
+        <p class="muted side-hint">Section counts and view options appear here after an analysis.</p>
+      </aside>
     </main>
   </div>
 
@@ -120,7 +129,8 @@
   </div>
 
   <footer>
-    AI-assisted guidance. Playbook content is drawn from the SHIELD playbook; AI-generated content is labeled. Review with your legal, privacy and incident-command leads before acting.
+    <p>AI-assisted guidance. Playbook content is drawn from the SHIELD playbook. AI-generated content is labeled. Review with your legal, privacy and incident-command leads before acting</p>
+    <p id="version" class="version"></p>
   </footer>
 
   <script src="config.js"></script>

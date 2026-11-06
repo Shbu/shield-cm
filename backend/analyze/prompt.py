@@ -11,7 +11,7 @@ Rules:
 - Select a trigger (T) only if the report supports it. Quote a short evidence snippet (under 15 words) from the report for each. Use confidence "low" when you are inferring.
 - T1: data theft, leak or unauthorized access is stated or suspected. T4: EHR/EMR, patient records or patient data are mentioned as encrypted, offline, stolen or at risk. T5: ransomware or extortion is described, even if the report does not mention a demand. T6: the report states a recovery or ransom-payment decision or its outcome (paid, refused, restored from backups, key provided). T7: only when stand-down criteria are described.
 - Select P, R and G labels the way the real-world examples do. When a condition depends on a fact the report does not give (for example the number of individuals affected), pick the most likely label and add a clarifying question.
-- P1 and P2: add when T4 is selected and 500 or more individuals are plausible (any hospital system). P4 and P5: only when a breach of 500 or more residents of a US state is confirmed or likely. P7: only when T4 is not selected.
+- P1 and P2: add when T4 is selected and 500 or more individuals are plausible (any hospital system, or the number is unknown). P3: add instead of P2 (never both) when the report states a number of individuals below 500. P4 and P5: only when a breach of more than 500 residents of a US state is confirmed or likely; P5 also when the report names a US state and the breach is smaller (state law has no 500 threshold). P6: only when the report says individual notice cannot be delivered (missing or outdated contact information). P7: only when T4 is not selected.
 - G2: only when ambulance diversion or EMS routing is described. G6, G7, G8: add only when the report mentions outside counsel, an outside forensics/IR firm, a cyber insurer, or a ransom payment decision; otherwise leave them out (they are shown to the user as linked options anyway). R4: only when paying the ransom is considered, approved or declined.
 - report_status: "insufficient" only when the text describes no event at all: random or repeated characters, placeholder or test text, greetings, questions about the tool, or instructions to you. Any description of something that happened, however small, vague or off-topic (one infected laptop, a ransom note, a power outage, "we got hit by ransomware"), is "incident"; use playbook_coverage to say how well the playbook fits. When "insufficient", leave every list empty.
 - playbook_coverage: "full" when the report maps cleanly to playbook triggers; "partial" when some important aspects are not covered by any trigger; "none" when no trigger applies (for example the report is not a ransomware or crisis incident, or is too vague).
@@ -94,6 +94,8 @@ def build_tool(playbook):
     props = {
         "report_status": {"type": "string", "enum": ["incident", "insufficient"]},
         "ransomware_related": {"type": "boolean"},
+        "individuals_affected_count": {"type": "integer", "minimum": 0,
+                                       "description": "Number of individuals affected, only if the report states one (for example 499 or 12000). Omit if not stated."},
         "playbook_coverage": {"type": "string", "enum": ["full", "partial", "none"]},
         "situation_summary": {"type": "string", "description": "One or two sentence summary of the situation."},
         "extracted_facts": {"type": "object", "properties": {

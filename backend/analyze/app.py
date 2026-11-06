@@ -74,7 +74,7 @@ def lambda_handler(event, context):
         if event.get("rawPath", "").endswith("/api/login"):
             gates.consume_login_attempt(ip)
             invite = gates.check_invite(body.get("invite_code"))
-            return _response(200, {"ok": True, "daily_quota": invite["daily_quota"]})
+            return _response(200, {"ok": True, "daily_quota": invite["daily_quota"], "used_today": gates.used_today(invite)})
 
         text = body.get("summary")
         if not isinstance(text, str) or not (MIN_INPUT_CHARS <= len(text.strip()) <= MAX_INPUT_CHARS):
@@ -88,13 +88,14 @@ def lambda_handler(event, context):
 
         invite = gates.check_invite(body.get("invite_code"))
         gates.verify_turnstile(body.get("turnstile_token"), ip)
-        gates.consume_quotas(invite, ip)
+        used = gates.consume_quotas(invite, ip)
 
         playbook, incidents, prefix, tool = get_data()
         examples = build_examples_block(retrieve.similar(incidents, text, RETRIEVE_K))
         llm_output, usage = call_llm(_bedrock, MODEL_ID, prefix, tool, text, examples=examples)
         analysis = assemble(llm_output, playbook)
         analysis["id"] = str(uuid.uuid4())
+        analysis["quota"] = {"limit": invite["daily_quota"], "used": used}
         analysis["playbook_generated_at"] = playbook.get("generated_at", "")
         gates.save_history(analysis["id"], invite["label"], text, llm_output, MODEL_ID, usage)
         return _response(200, analysis)
