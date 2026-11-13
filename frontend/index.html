@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SHIELD AI Crisis Management</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="style.css">
   <script src="theme.js"></script>
 </head>
@@ -64,7 +65,13 @@
       </div>
     </header>
 
+    <div id="session-warn" class="session-warn" role="alert" hidden>
+      <span id="session-warn-text"></span>
+      <button id="session-stay" type="button" class="btn-small">Stay signed in</button>
+    </div>
+
     <main class="workspace">
+      <div class="left-col">
       <aside class="panel input-panel">
         <h2>Describe the incident</h2>
         <p class="muted">A few sentences are enough: what happened, which systems are affected, whether data may have been taken, and the impact on patient care.</p>
@@ -72,7 +79,7 @@
 
         <form id="form" autocomplete="off">
           <label for="summary" class="sr-only">Incident summary</label>
-          <textarea id="summary" name="summary" rows="9" required minlength="20" maxlength="1500"
+          <textarea id="summary" name="summary" rows="6" required minlength="20" maxlength="1500"
             placeholder="Example: Overnight our EHR and network were encrypted. Ambulances are being diverted and a ransom note demands payment in Bitcoin. We believe patient files were copied."></textarea>
           <div class="counter"><span id="count">0</span> / 1500</div>
 
@@ -89,25 +96,46 @@
         </form>
       </aside>
 
+      <aside id="side" class="panel side-panel" data-empty="true" aria-label="Overview and view options">
+        <p class="muted side-hint">Section counts and view options appear here after an analysis.</p>
+      </aside>
+      </div>
+
       <section class="results-area" aria-label="Analysis results">
+        <section id="print-report" class="print-only" hidden>
+          <div class="pr-head">
+            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.7 7.5 10.3 4.4-1.6 7.5-5.7 7.5-10.3V5.5L12 2.5z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg>
+            <div><h1>SHIELD AI Crisis Management</h1><p>Incident analysis report</p></div>
+          </div>
+          <dl class="pr-meta">
+            <div><dt>Generated</dt><dd id="pr-date"></dd></div>
+            <div><dt>Analysis ID</dt><dd id="pr-id"></dd></div>
+            <div><dt>Playbook generated</dt><dd id="pr-playbook"></dd></div>
+            <div><dt>Application</dt><dd id="pr-version"></dd></div>
+          </dl>
+          <h2>Incident description</h2>
+          <p id="pr-incident" class="pr-incident"></p>
+        </section>
         <div id="empty" class="panel empty">
           <h2>Results appear here</h2>
           <ul>
-            <li><strong>A response timeline</strong> for the first hour, first 24 hours and 24 to 72 hours, labeled as AI-generated</li>
+            <li><strong>A Response Timeline</strong> for the first hour, first 24 hours and 24 to 72 hours, labeled as AI-generated</li>
             <li><strong>Matched triggers</strong> with stakeholders, roles and communication owners</li>
             <li><strong>Notification obligations</strong> for PHI, ransom and general external parties</li>
           </ul>
         </div>
         <div id="loading" hidden>
+          <ol id="progress" class="progress" aria-label="Analysis progress">
+            <li data-state="pending"><span class="pdot"></span><span>Reading the report</span></li>
+            <li data-state="pending"><span class="pdot"></span><span>Matching the playbook</span></li>
+            <li data-state="pending"><span class="pdot"></span><span>Preparing your timeline</span></li>
+          </ol>
           <div class="skeleton tall"></div>
           <div class="skeleton-grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
         </div>
         <div id="results" hidden></div>
+        <p id="pr-foot" class="print-only pr-foot" hidden>AI-assisted guidance, not legal advice. Playbook content is drawn from the SHIELD playbook; AI-generated content is labeled. Review with your legal, privacy and incident-command leads before acting.</p>
       </section>
-
-      <aside id="side" class="panel side-panel" data-empty="true" aria-label="Overview and view options">
-        <p class="muted side-hint">Section counts and view options appear here after an analysis.</p>
-      </aside>
     </main>
   </div>
 
